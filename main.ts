@@ -15,7 +15,6 @@ const DEFAULT_SETTINGS: RevealTextSettings = {
 // ================================================================= //
 // == 1. SHARED FUNCTION TO CREATE THE INTERACTIVE WORD ELEMENT == //
 // ================================================================= //
-// This function is now shared between the editor view and the reading mode view.
 function createInteractiveWordElement(word: string, plugin: RevealTextPlugin): HTMLElement {
     const container = document.createElement("span");
     container.className = "reveal-container";
@@ -72,11 +71,7 @@ export default class RevealTextPlugin extends Plugin {
 		await this.loadSettings();
 		this.addSettingTab(new RevealTextSettingTab(this.app, this));
 
-        // --- REGISTER BOTH EXTENSIONS ---
-		// 1. For Source Mode and Live Preview
-        this.registerEditorExtension(buildEditorPlugin(this));
-
-        // 2. For Reading Mode (the one that was missing)
+		this.registerEditorExtension(buildEditorPlugin(this));
 		this.registerMarkdownPostProcessor(this.buildReadingModeProcessor.bind(this));
 
 		this.registerEvent(
@@ -106,45 +101,46 @@ export default class RevealTextPlugin extends Plugin {
 	}
 
     // ======================================================== //
-    // == 2. PROCESSOR FOR READING MODE                      == //
+    // == 2. PROCESSOR FOR READING MODE (BUG FIXED)          == //
     // ======================================================== //
     async buildReadingModeProcessor(element: HTMLElement, context: MarkdownPostProcessorContext) {
-        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-        const nodesToReplace: {node: Node, word: string}[] = [];
-        const regex = new RegExp(`${this.settings.prefix.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}(\\w+)`, 'g');
+        // Find all text nodes within the element that are not already part of our widget.
+        const textNodes = Array.from(element.querySelectorAll("*:not(script, style, .reveal-container)"))
+                               .flatMap(el => Array.from(el.childNodes))
+                               .filter(node => node.nodeType === Node.TEXT_NODE);
 
-        while(walker.nextNode()) {
-            const node = walker.currentNode;
-            if (node.parentElement?.closest('.reveal-container')) continue;
-            
-            if (node.textContent && node.textContent.match(regex)) {
-                // We find all matches in the node's text
-                const matches = Array.from(node.textContent.matchAll(regex));
-                if (matches.length > 0) {
-                     // Create a document fragment to hold the new nodes
-                    const fragment = document.createDocumentFragment();
-                    let lastIndex = 0;
+        const prefix = this.settings.prefix;
+        const regex = new RegExp(`${prefix.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}(\\w+)`, 'g');
 
-                    for (const match of matches) {
-                        const word = match[1]; // The word is the first captured group
-                        const matchIndex = match.index ?? 0;
+        for (const node of textNodes) {
+            const text = node.textContent;
+            if (!text || !text.match(regex)) continue;
 
-                        // Add the text before the match
-                        fragment.appendChild(document.createTextNode(node.textContent.substring(lastIndex, matchIndex)));
-                        
-                        // Add the interactive element
-                        const interactiveEl = createInteractiveWordElement(word, this);
-                        fragment.appendChild(interactiveEl);
+            const fragment = document.createDocumentFragment();
+            let lastIndex = 0;
 
-                        lastIndex = matchIndex + match[0].length;
-                    }
-                    // Add any remaining text after the last match
-                    fragment.appendChild(document.createTextNode(node.textContent.substring(lastIndex)));
-                    
-                    // Replace the original text node with our fragment
-                    node.parentNode?.replaceChild(fragment, node);
-                }
+            // Use matchAll to find every occurrence in the text node
+            for (const match of text.matchAll(regex)) {
+                const word = match[1];
+                const matchIndex = match.index ?? 0;
+
+                // Append text before the current match
+                fragment.appendChild(document.createTextNode(text.substring(lastIndex, matchIndex)));
+                
+                // Create and append the interactive element
+                const interactiveEl = createInteractiveWordElement(word, this);
+                fragment.appendChild(interactiveEl);
+
+                lastIndex = matchIndex + match[0].length;
             }
+
+            // If there's any text left after the last match, append it
+            if (lastIndex < text.length) {
+                fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+            }
+
+            // Replace the original text node with our new fragment
+            node.parentNode?.replaceChild(fragment, node);
         }
     }
 }
@@ -184,10 +180,8 @@ function buildEditorPlugin(plugin: RevealTextPlugin) {
                         const isEditing = selection.from <= endIndex && selection.to >= startIndex;
 
                         if (isEditing) {
-                            // If cursor is inside, just apply a style to the raw text
                             builder.add(startIndex, endIndex, Decoration.mark({ class: 'cm-reveal-text-syntax' }));
                         } else {
-                            // Otherwise, replace the text with our interactive widget
                             builder.add(startIndex, endIndex, Decoration.replace({ widget: new RevealWidget(word, plugin) }));
                         }
                     }
