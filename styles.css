@@ -1,8 +1,35 @@
 /*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
+ The main container for our interactive word.
 */
+.reveal-container {
+  cursor: pointer;
+  display: inline-block;
+  user-select: none; /* Prevents text selection when blurred */
+}
+
+/*
+  The initial state for each letter: blurred and unreadable.
+  We use a text-shadow to create the blur effect, which works well across different themes.
+*/
+.reveal-container .reveal-letter {
+  color: transparent;
+  text-shadow: 0 0 7px rgba(0,0,0,0.6);
+  transition: all 0.2s ease;
+}
+
+/*
+  The class for a letter that is temporarily revealed on hover.
+*/
+.reveal-container .reveal-letter.temp-revealed {
+  color: inherit;
+  text-shadow: none;
+}
+
+/*
+  When the word is fully revealed by clicking, this class is added to the container.
+  It ensures all letters inside become permanently visible.
+*/
+.reveal-container.fully-revealed .reveal-letter {
+  color: inherit;
+  text-shadow: none;
+}

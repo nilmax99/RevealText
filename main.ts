@@ -1,134 +1,93 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { Plugin } from 'obsidian';
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
-
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class RevealTextPlugin extends Plugin {
 
 	async onload() {
-		await this.loadSettings();
+		console.log('Reveal Text plugin loaded.');
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		// Register a Markdown post-processor. This function will be called on every rendered Markdown file.
+		this.registerMarkdownPostProcessor((element: HTMLElement, context) => {
+			
+			// Find all potential elements. We'll look for `<code>` blocks,
+			// which are created in Markdown using single backticks: `++text++`
+			const codeElements = element.findAll("code");
+			
+			for (const el of codeElements) {
+				const text = el.innerText.trim();
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+				// Check if the text matches our custom format: ++word++
+				if (text.startsWith('++') && text.endsWith('++')) {
+					// Extract the word without the '++' symbols
+					const word = text.substring(2, text.length - 2);
+					this.createInteractiveWord(el, word);
 				}
 			}
 		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
 	onunload() {
-
+		console.log('Reveal Text plugin unloaded.');
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
+	createInteractiveWord(originalElement: HTMLElement, word: string) {
+		// Create the main container that will hold all the letters
+		const container = document.createElement("span");
+		container.className = "reveal-container";
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
+		// Create a separate span for each letter of the word
+		const letters = word.split('').map(char => {
+			const letterSpan = document.createElement("span");
+			letterSpan.className = "reveal-letter";
+			letterSpan.textContent = char;
+			container.appendChild(letterSpan);
+			return letterSpan;
+		});
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+		let isFullyRevealed = false;
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
+		// Event handler for hovering over the word
+		const onMouseOver = () => {
+			if (isFullyRevealed) return;
+			
+			// First, reset any previously revealed letters
+			letters.forEach(l => l.classList.remove("temp-revealed"));
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
+			// Choose 1 to 3 letters to reveal, but no more than the word's length
+			const revealCount = Math.min(letters.length, Math.floor(Math.random() * 3) + 1);
+			
+			// Create a shuffled list of indices and pick the first few to reveal
+			const shuffledIndices = Array.from(Array(letters.length).keys()).sort(() => Math.random() - 0.5);
+			
+			for (let i = 0; i < revealCount; i++) {
+				const indexToReveal = shuffledIndices[i];
+				letters[indexToReveal].classList.add("temp-revealed");
+			}
+		};
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+		// Event handler for when the mouse leaves the word
+		const onMouseOut = () => {
+			if (isFullyRevealed) return;
+			// Hide all temporarily revealed letters
+			letters.forEach(l => l.classList.remove("temp-revealed"));
+		};
 
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
+		// Event handler for clicking the word
+		const onClick = () => {
+			isFullyRevealed = true;
+			container.classList.add("fully-revealed");
+			
+			// Remove event listeners after the word is permanently revealed
+			container.removeEventListener('mouseover', onMouseOver);
+			container.removeEventListener('mouseout', onMouseOut);
+			container.removeEventListener('click', onClick);
+		};
 
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+		// Attach the event listeners
+		container.addEventListener('mouseover', onMouseOver);
+		container.addEventListener('mouseout', onMouseOut);
+		container.addEventListener('click', onClick);
+		
+		// Replace the original `<code>` element with our new interactive container
+		originalElement.replaceWith(container);
 	}
 }
