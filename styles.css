@@ -1,34 +1,46 @@
 /*
- The main container for our interactive word.
+ Base container for the interactive word.
 */
 .reveal-container {
   cursor: pointer;
   display: inline-block;
-  user-select: none; /* Prevents text selection when blurred */
+  user-select: none;
 }
 
-/*
-  The initial state for each letter: blurred and unreadable.
-  We use a text-shadow to create the blur effect, which works well across different themes.
-*/
-.reveal-container .reveal-letter {
+/* --- Style 1: Blur Effect --- */
+.reveal-container.blur-style .reveal-letter {
   color: transparent;
   text-shadow: 0 0 7px rgba(0,0,0,0.6);
-  transition: all 0.2s ease;
+  transition: all 0.2s ease-in-out;
 }
 
-/*
-  The class for a letter that is temporarily revealed on hover.
-*/
+/* --- Style 2: Underline Effect --- */
+.reveal-container.underline-style {
+  /* Creates the underline */
+  border-bottom: 2px solid var(--text-accent);
+  line-height: 1.2;
+}
+
+.reveal-container.underline-style .reveal-letter {
+  /* Hides the text completely */
+  color: transparent;
+  text-shadow: none;
+  transition: all 0.2s ease-in-out;
+}
+
+/* --- Shared Reveal Logic --- */
+
+/* Class for a letter temporarily revealed on hover */
 .reveal-container .reveal-letter.temp-revealed {
   color: inherit;
   text-shadow: none;
 }
 
-/*
-  When the word is fully revealed by clicking, this class is added to the container.
-  It ensures all letters inside become permanently visible.
-*/
+/* Class for the container when the word is fully revealed */
+.reveal-container.fully-revealed {
+  border-bottom-color: transparent; /* Hide underline when revealed */
+}
+
 .reveal-container.fully-revealed .reveal-letter {
   color: inherit;
   text-shadow: none;
