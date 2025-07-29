@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, Editor, MarkdownView } from 'obsidian';
 
 // Settings interface to store the user's preferred style
 interface RevealTextSettings {
@@ -21,6 +21,25 @@ export default class RevealTextPlugin extends Plugin {
 		this.addSettingTab(new RevealTextSettingTab(this.app, this));
 
 		console.log('Reveal Text plugin loaded.');
+
+        // --- NEW: Add Right-Click Context Menu ---
+        this.registerEvent(
+            this.app.workspace.on('editor-menu', (menu, editor, view) => {
+                const selection = editor.getSelection();
+                // Only show the menu item if text is selected
+                if (selection) {
+                    menu.addItem((item) => {
+                        item
+                            .setTitle("Apply Reveal Text")
+                            .setIcon("eye") // An eye icon
+                            .onClick(() => {
+                                // Wrap the selected text with our syntax
+                                editor.replaceSelection(`\`++${selection}++\``);
+                            });
+                    });
+                }
+            })
+        );
 
 		this.registerMarkdownPostProcessor((element: HTMLElement, context) => {
 			const codeElements = element.findAll("code");
@@ -51,7 +70,6 @@ export default class RevealTextPlugin extends Plugin {
 	createInteractiveWord(originalElement: HTMLElement, word: string) {
 		const container = document.createElement("span");
 		container.className = "reveal-container";
-		// Add the class for the currently selected style from settings
 		container.classList.add(this.settings.revealStyle === 'blur' ? 'blur-style' : 'underline-style');
 
 		const letters = word.split('').map(char => {
@@ -62,18 +80,16 @@ export default class RevealTextPlugin extends Plugin {
 			return letterSpan;
 		});
 
-		// --- LOGIC FOR DYNAMIC REVEAL COUNT ---
 		const getRevealCount = (wordLength: number): number => {
 			if (wordLength <= 4) return 1;
 			if (wordLength <= 6) return Math.floor(Math.random() * 2) + 1; // 1 or 2
 			if (wordLength <= 8) return Math.floor(Math.random() * 2) + 2; // 2 or 3
-			// For longer words, reveal between 1/3 and 1/2 of letters
 			const min = Math.floor(wordLength / 3);
 			const max = Math.floor(wordLength / 2);
 			return Math.floor(Math.random() * (max - min + 1)) + min;
 		};
 
-		const onMouseOver = () => {
+		const onMouseEnter = () => {
 			if (container.classList.contains("fully-revealed")) return;
 
 			letters.forEach(l => l.classList.remove("temp-revealed"));
@@ -86,26 +102,24 @@ export default class RevealTextPlugin extends Plugin {
 			}
 		};
 
-		const onMouseOut = () => {
+		const onMouseLeave = () => {
 			if (container.classList.contains("fully-revealed")) return;
 			letters.forEach(l => l.classList.remove("temp-revealed"));
 		};
 
-		// --- LOGIC FOR CLICK TOGGLE ---
 		const onClick = () => {
-			// Toggle the 'fully-revealed' class on the container
 			container.classList.toggle("fully-revealed");
 		};
 
-		container.addEventListener('mouseover', onMouseOver);
-		container.addEventListener('mouseout', onMouseOut);
+        // --- FIX: Use mouseenter/mouseleave instead of mouseover/mouseout ---
+		container.addEventListener('mouseenter', onMouseEnter);
+		container.addEventListener('mouseleave', onMouseLeave);
 		container.addEventListener('click', onClick);
 		
 		originalElement.replaceWith(container);
 	}
 }
 
-// --- SETTINGS TAB IMPLEMENTATION ---
 class RevealTextSettingTab extends PluginSettingTab {
 	plugin: RevealTextPlugin;
 
@@ -129,8 +143,6 @@ class RevealTextSettingTab extends PluginSettingTab {
 				.onChange(async (value: 'blur' | 'underline') => {
 					this.plugin.settings.revealStyle = value;
 					await this.plugin.saveSettings();
-					// You might want to force a re-render of the markdown view
-					// but for now, new elements will use the new style.
 				}));
 	}
 }
