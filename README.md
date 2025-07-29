@@ -1,94 +1,54 @@
-# Obsidian Sample Plugin
+# Reveal Text Plugin for Obsidian
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+This is a plugin for [Obsidian](https://obsidian.md) that allows you to create interactive words or phrases that are initially hidden and can be revealed by hovering or clicking on them. It's a great tool for creating flashcards, spoilers, or interactive notes.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+- **Custom Syntax**: Uses a simple, configurable prefix to make words interactive (default is `re:word`).
+- **Two Reveal Styles**:
+    - **Blur**: The word is initially blurred and becomes clear upon interaction.
+    - **Underline**: The word is completely hidden, and only a colored line is visible.
+- **Interactive Reveal**:
+    - **Hover**: Hovering over a word reveals a random subset of its letters. The number of revealed letters is dynamically calculated based on the word's length.
+    - **Click**: Clicking a word toggles its full visibility. Click once to reveal the entire word, and click again to hide it.
+- **Editor Integration**:
+    - **Live Preview Support**: Works seamlessly in both Live Preview and Reading Mode.
+    - **Context Menu**: Simply select text, right-click, and choose "Apply Reveal Text" to wrap your word with the correct syntax.
+- **Customization**: A dedicated settings panel allows you to change the syntax prefix and the default reveal style.
 
-## First time developing plugins?
+## How to Use
 
-Quick starting guide for new plugin devs:
+There are two ways to create a revealable word:
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+1.  **Manual Syntax**:
+    Simply type your chosen prefix before a word. By default, this is `re:`. For example:
+    `re:obsidian`
 
-## Releasing new releases
+2.  **Context Menu (Recommended)**:
+    - Select the word or phrase you want to hide in the editor.
+    - Right-click on the selection.
+    - Click on **"Apply Reveal Text"**. The plugin will automatically format the text for you.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+## Settings
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+You can customize the plugin's behavior by going to **Settings > Reveal Text**:
+- **Reveal Style**: Choose between the "Blur" or "Underline" effect.
+- **Syntax Prefix**: Change the prefix used to identify interactive words (e.g., you can change `re:` to `hide:` or any other text).
 
-## Adding your plugin to the community plugin list
+## Manual Installation
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+1.  Download the `main.js`, `styles.css`, and `manifest.json` files from the [latest release](https://github.com/nilmax99/RevealText/releases).
+2.  Go to your Obsidian vault's plugin folder: `YourVault/.obsidian/plugins/`.
+3.  Create a new folder named `reveal-text`.
+4.  Copy the three downloaded files into the `reveal-text` folder.
+5.  Reload Obsidian, go to **Settings > Community Plugins**, and enable "Reveal Text".
 
-## How to use
+## For Developers
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### Building the Plugin
 
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
-
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
+1.  Clone this repository.
+2.  Make sure you have NodeJS installed.
+3.  Run `npm i` to install the necessary dependencies.
+4.  Run `npm run dev` to start the development server, which will automatically recompile `main.js` on changes.
+5.  To create a production build, run `npm run build`.
